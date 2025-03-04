@@ -11,6 +11,7 @@ from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle
+from kivy.clock import Clock
 
 # Color scheme based on your Figma design
 COLORS = {
@@ -49,17 +50,17 @@ class LoginScreen(Screen):
                               size_hint=(0.9, 0.4))
         
         # Username field
-        username_input = TextInput(hint_text='Username',
+        self.username_input = TextInput(hint_text='Username',
                               multiline=False,
                               size_hint=(1, None),
                               height=dp(40),
                               background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                               cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                               padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(username_input)
+        form_layout.add_widget(self.username_input)
         
         # Password field
-        password_input = TextInput(hint_text='Password',
+        self.password_input = TextInput(hint_text='Password',
                                  multiline=False,
                                  password=True,
                                  size_hint=(1, None),
@@ -67,7 +68,10 @@ class LoginScreen(Screen):
                                  background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                                  cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                                  padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(password_input)
+        form_layout.add_widget(self.password_input)
+
+        self.message = Label(text="", color=(1, 0, 0, 1))
+        form_layout.add_widget(self.message)
         
         # Forgot password link
         forgot_pw = Label(text='Forgot your password?',
@@ -96,6 +100,7 @@ class LoginScreen(Screen):
                             size_hint=(1, None),
                             height=dp(30),
                             halign='center')
+        account_label.bind(on_touch_down=self.navigate_to_register)
         form_layout.add_widget(account_label)
         
         layout.add_widget(form_layout)
@@ -143,11 +148,31 @@ class LoginScreen(Screen):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
     
+    
     def sign_in(self, instance):
         # Would connect to your authentication system
         # For now, navigate to home screen
-        username = self.username.text.strip()
-        password = self.password.text.strip()
+        username = self.username_input.text.strip()
+        password = self.password_input.text.strip()
+        print(f"Username : {username} \nPassword : {password}")
+
+        if not username or not password:
+            self.message.text = 'Please enter all required details'
+            self.message.color = (1,0,0,1)
+            return
+        
+        response = self.db_helper.authenticate_user(username, password)
+        print(f"Response : {response}")
+        
+        if response:  # If authentication is successful
+            self.message.text = 'Login Successful!'
+            self.message.color = (0,1,0,1)
+            Clock.schedule_once(self.navigate_to_home, 3)  # Delay transition by 2 seconds
+        else:
+            self.message.text = 'Username or Password is wrong'  # Show error and stay on login screen
+            self.message.color = (1,0,0,1)
+    
+    def navigate_to_home(self, dt):
         self.manager.transition = SlideTransition(direction='left')
         self.manager.current = 'home'
     
@@ -159,3 +184,8 @@ class LoginScreen(Screen):
     def go_back(self, instance):
         self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'welcome'
+
+    def navigate_to_register(self, instance, touch):
+        if instance.collide_point(*touch.pos):  # Ensures it was actually clicked
+            self.manager.transition = SlideTransition(direction='right')
+            self.manager.current = 'register'

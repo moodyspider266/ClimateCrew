@@ -11,6 +11,7 @@ from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle
+from kivy.clock import Clock
 
 # Color scheme based on your Figma design
 COLORS = {
@@ -49,27 +50,27 @@ class RegistrationScreen(Screen):
                               size_hint=(0.9, 0.5))
         
         # Username field
-        username_input = TextInput(hint_text='username',
+        self.username_input = TextInput(hint_text='username',
                               multiline=False,
                               size_hint=(1, None),
                               height=dp(40),
                               background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                               cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                               padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(username_input)
+        form_layout.add_widget(self.username_input)
 
         # Email field
-        email_input = TextInput(hint_text='email',
+        self.email_input = TextInput(hint_text='email',
                               multiline=False,
                               size_hint=(1, None),
                               height=dp(40),
                               background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                               cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                               padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(email_input)
+        form_layout.add_widget(self.email_input)
         
         # Password field
-        password_input = TextInput(hint_text='password',
+        self.password_input = TextInput(hint_text='password',
                                  multiline=False,
                                  password=True,
                                  size_hint=(1, None),
@@ -77,10 +78,10 @@ class RegistrationScreen(Screen):
                                  background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                                  cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                                  padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(password_input)
+        form_layout.add_widget(self.password_input)
         
         # Confirm Password field
-        confirm_input = TextInput(hint_text='confirm_password',
+        self.confirm_input = TextInput(hint_text='confirm_password',
                                 multiline=False,
                                 password=True,
                                 size_hint=(1, None),
@@ -88,7 +89,10 @@ class RegistrationScreen(Screen):
                                 background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                                 cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                                 padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(confirm_input)
+        form_layout.add_widget(self.confirm_input)
+
+        self.message = Label(text="", color=(1, 0, 0, 1))
+        form_layout.add_widget(self.message)
         
         # Sign up button
         signup_btn = Button(text='Sign Up',
@@ -148,13 +152,15 @@ class RegistrationScreen(Screen):
     def sign_up(self, instance=None):
         # Would connect to your user registration system
         # For now, navigate to onboarding screen
-        username = self.username.text.strip()
-        password = self.password.text.strip()
-        email = self.email.text.strip()
-        confirm_password = self.confirm_password.text.strip()
+        username = self.username_input.text.strip()
+        password = self.password_input.text.strip()
+        email = self.email_input.text.strip()
+        confirm_password = self.confirm_input.text.strip()
+        print(f"Username : {username} \n Password : {password} \n Email : {email} \n Confirm_Password : {confirm_password}")
 
         if not username or not password or not email:
             self.message.text = 'Please enter all required details'
+            self.message.color = (1, 0, 0, 1)
             return 
         
         if password != confirm_password:
@@ -162,19 +168,21 @@ class RegistrationScreen(Screen):
             return
         
         response = self.db_helper.register_user(username, password, email)
-        print(response)
-        # if self.db_helper.register_user(username, password, email):
-        #     self.message.text = 'Registration Successful!'
-        # else:
-        #     self.message.text = 'Username or email already exists'
-        if response["success"]:
-            self.message.text = response["message"]  # e.g., 'Registration Successful!'
-            self.manager.transition = SlideTransition(direction='left')
-            self.manager.current = 'onboarding'
+        print("Response :",response)
+        if response==True:
+            self.message.text = 'Registration Successful!'
+            self.message.color = (0, 1, 0, 1)
+            Clock.schedule_once(self.navigate_to_onboarding, 3)
         else:
-            self.message.text = response["error"]  # e.g., 'Username or email already exists'
+            self.message.text = 'Username or email already exists'
+            self.message.color = (1, 0, 0, 1)
+
+    def navigate_to_onboarding(self, dt):
+        self.manager.transition = SlideTransition(direction='left')
+        self.manager.current = 'onboarding'
         
     def goto_login(self, instance):
+        self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'login'
 
     def go_back(self, instance):
