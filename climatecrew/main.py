@@ -6,10 +6,13 @@ from screens.registration import RegistrationScreen
 from screens.onboarding import OnboardingScreen
 from screens.home import HomeScreen
 from screens.welcome import WelcomeScreen
-
+from kivy.core.text import LabelBase
 
 # Set the app to mobile dimensions for testing
 Window.size = (360, 640)
+
+# Register Google Font globally
+LabelBase.register(name="Roboto", fn_regular="assets/fonts/Roboto-VariableFont_wdth,wght.ttf")
 
 # Color scheme based on your Figma design
 COLORS = {
