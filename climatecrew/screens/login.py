@@ -22,8 +22,9 @@ COLORS = {
 }
 
 class LoginScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, db_helper, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
+        self.db_helper = db_helper
         self.name = 'login'
         
         layout = FloatLayout()
@@ -47,15 +48,15 @@ class LoginScreen(Screen):
                               pos_hint={'center_x': 0.5, 'center_y': 0.6},
                               size_hint=(0.9, 0.4))
         
-        # Email field
-        email_input = TextInput(hint_text='Email',
+        # Username field
+        username_input = TextInput(hint_text='Username',
                               multiline=False,
                               size_hint=(1, None),
                               height=dp(40),
                               background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                               cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                               padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(email_input)
+        form_layout.add_widget(username_input)
         
         # Password field
         password_input = TextInput(hint_text='Password',
@@ -145,6 +146,8 @@ class LoginScreen(Screen):
     def sign_in(self, instance):
         # Would connect to your authentication system
         # For now, navigate to home screen
+        username = self.username.text.strip()
+        password = self.password.text.strip()
         self.manager.transition = SlideTransition(direction='left')
         self.manager.current = 'home'
     

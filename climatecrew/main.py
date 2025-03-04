@@ -7,6 +7,7 @@ from screens.onboarding import OnboardingScreen
 from screens.home import HomeScreen
 from screens.welcome import WelcomeScreen
 from kivy.core.text import LabelBase
+from db_helper import DatabaseHelper
 
 # Set the app to mobile dimensions for testing
 Window.size = (360, 640)
@@ -25,17 +26,25 @@ COLORS = {
 
 class ClimateCrewApp(App):
     def build(self):
+        self.db_helper = DatabaseHelper()
         # Create the screen manager
         sm = ScreenManager(transition=SlideTransition())
         
         # Add screens
+        login_screen = LoginScreen(self.db_helper, name='login')
+        register_screen = RegistrationScreen(self.db_helper, name='register')
+        home_screen = HomeScreen(name='home')
         sm.add_widget(WelcomeScreen())
-        sm.add_widget(LoginScreen())
-        sm.add_widget(RegistrationScreen())
+        sm.add_widget(login_screen)
+        sm.add_widget(register_screen)
+        sm.add_widget(home_screen)
         sm.add_widget(OnboardingScreen())
-        sm.add_widget(HomeScreen())
         
         return sm
+
+    def on_stop(self):
+        # Close database connection when app closes
+        self.db_helper.close()
 
 if __name__ == '__main__':
     ClimateCrewApp().run()

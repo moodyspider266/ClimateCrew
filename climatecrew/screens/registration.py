@@ -22,9 +22,10 @@ COLORS = {
 }
 
 class RegistrationScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, db_helper,**kwargs):
         super(RegistrationScreen, self).__init__(**kwargs)
         self.name = 'register'
+        self.db_helper = db_helper
         
         layout = FloatLayout()
         with layout.canvas.before:
@@ -47,6 +48,16 @@ class RegistrationScreen(Screen):
                               pos_hint={'center_x': 0.5, 'center_y': 0.55},
                               size_hint=(0.9, 0.5))
         
+        # Username field
+        username_input = TextInput(hint_text='Username',
+                              multiline=False,
+                              size_hint=(1, None),
+                              height=dp(40),
+                              background_color=get_color_from_hex(COLORS['white'] + 'ff'),
+                              cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
+                              padding=[dp(10), dp(10), 0, 0])
+        form_layout.add_widget(username_input)
+
         # Email field
         email_input = TextInput(hint_text='Email',
                               multiline=False,
@@ -137,9 +148,24 @@ class RegistrationScreen(Screen):
     def sign_up(self, instance):
         # Would connect to your user registration system
         # For now, navigate to onboarding screen
+        username = self.username.text.strip()
+        password = self.password.text.strip()
+        email = self.email.text.strip()
+
+        if not username or not password or not email:
+            self.message.text = 'Please enter the required details'
+            return 
+
+        if self.db_helper.register_user(username, password, email):
+            self.message.text = 'Registration Successful!'
+        else:
+            self.message.text = 'Username or email already exists'
         self.manager.transition = SlideTransition(direction='left')
         self.manager.current = 'onboarding'
     
+    def goto_login(self, instance):
+        self.manager.current = 'login'
+
     def go_back(self, instance):
         self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'welcome'
