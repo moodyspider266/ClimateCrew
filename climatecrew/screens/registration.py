@@ -49,7 +49,7 @@ class RegistrationScreen(Screen):
                               size_hint=(0.9, 0.5))
         
         # Username field
-        username_input = TextInput(hint_text='Username',
+        username_input = TextInput(hint_text='username',
                               multiline=False,
                               size_hint=(1, None),
                               height=dp(40),
@@ -59,7 +59,7 @@ class RegistrationScreen(Screen):
         form_layout.add_widget(username_input)
 
         # Email field
-        email_input = TextInput(hint_text='Email',
+        email_input = TextInput(hint_text='email',
                               multiline=False,
                               size_hint=(1, None),
                               height=dp(40),
@@ -69,7 +69,7 @@ class RegistrationScreen(Screen):
         form_layout.add_widget(email_input)
         
         # Password field
-        password_input = TextInput(hint_text='Password',
+        password_input = TextInput(hint_text='password',
                                  multiline=False,
                                  password=True,
                                  size_hint=(1, None),
@@ -80,7 +80,7 @@ class RegistrationScreen(Screen):
         form_layout.add_widget(password_input)
         
         # Confirm Password field
-        confirm_input = TextInput(hint_text='Confirm Password',
+        confirm_input = TextInput(hint_text='confirm_password',
                                 multiline=False,
                                 password=True,
                                 size_hint=(1, None),
@@ -145,24 +145,35 @@ class RegistrationScreen(Screen):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
     
-    def sign_up(self, instance):
+    def sign_up(self, instance=None):
         # Would connect to your user registration system
         # For now, navigate to onboarding screen
         username = self.username.text.strip()
         password = self.password.text.strip()
         email = self.email.text.strip()
+        confirm_password = self.confirm_password.text.strip()
 
         if not username or not password or not email:
-            self.message.text = 'Please enter the required details'
+            self.message.text = 'Please enter all required details'
             return 
-
-        if self.db_helper.register_user(username, password, email):
-            self.message.text = 'Registration Successful!'
+        
+        if password != confirm_password:
+            self.message.text = 'Password and Confirm Password should be the same'
+            return
+        
+        response = self.db_helper.register_user(username, password, email)
+        print(response)
+        # if self.db_helper.register_user(username, password, email):
+        #     self.message.text = 'Registration Successful!'
+        # else:
+        #     self.message.text = 'Username or email already exists'
+        if response["success"]:
+            self.message.text = response["message"]  # e.g., 'Registration Successful!'
+            self.manager.transition = SlideTransition(direction='left')
+            self.manager.current = 'onboarding'
         else:
-            self.message.text = 'Username or email already exists'
-        self.manager.transition = SlideTransition(direction='left')
-        self.manager.current = 'onboarding'
-    
+            self.message.text = response["error"]  # e.g., 'Username or email already exists'
+        
     def goto_login(self, instance):
         self.manager.current = 'login'
 

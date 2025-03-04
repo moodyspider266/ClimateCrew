@@ -38,6 +38,7 @@ class DatabaseHelper:
     
     def register_user(self, username, password, email):
         try:
+            print(username)
             password_hash = self.hash_password(password)
             self.cursor.execute(
                 "INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)",
