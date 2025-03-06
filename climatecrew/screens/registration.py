@@ -178,9 +178,29 @@ class RegistrationScreen(Screen):
             self.message.color = (1, 0, 0, 1)
 
     def navigate_to_onboarding(self, dt):
-        self.manager.transition = SlideTransition(direction='left')
-        self.manager.current = 'onboarding'
-        
+        # Ensure db_helper has a cursor to query the database
+        conn = self.db_helper.connect()  # Now connect() returns a valid connection
+        if conn is None:
+            print("Database connection failed!")
+            return  # Prevent further execution
+
+        cursor = conn.cursor()  # Now this won't cause an error
+
+        cursor.execute('SELECT id FROM users WHERE username = ?', (self.username_input.text.strip(),))
+        user_data = cursor.fetchone()
+
+        if user_data:
+            user_id = user_data[0]
+            print(f"User Registered with ID: {user_id}")  # Debugging
+            self.manager.get_screen('onboarding').set_user_id(user_id)
+            self.manager.transition = SlideTransition(direction='left')
+            self.manager.current = 'onboarding'
+        else:
+            print("Error: User not found in the database after registration.")
+    
+        cursor.close()
+        conn.close()
+
     def goto_login(self, instance):
         self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'login'

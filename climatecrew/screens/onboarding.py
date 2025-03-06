@@ -25,6 +25,7 @@ class OnboardingScreen(Screen):
     def __init__(self, **kwargs):
         super(OnboardingScreen, self).__init__(**kwargs)
         self.name = 'onboarding'
+        self.user_id = None
         
         layout = FloatLayout()
         with layout.canvas.before:
@@ -60,21 +61,21 @@ class OnboardingScreen(Screen):
                               size_hint=(0.9, 0.5))
         
         # Profile fields (adding just a few from the design)
-        name_input = TextInput(hint_text='Name',
+        self.name_input = TextInput(hint_text='Name',
                              multiline=False,
                              size_hint=(1, None),
                              height=dp(40),
                              background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                              cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
                              padding=[dp(10), dp(10), 0, 0])
-        form_layout.add_widget(name_input)
+        form_layout.add_widget(self.name_input)
         
         # City field with icon (simplified)
         city_layout = BoxLayout(orientation='horizontal', 
                               size_hint=(1, None),
                               height=dp(40))
         
-        city_input = TextInput(hint_text='City',
+        self.city_input = TextInput(hint_text='City',
                              multiline=False,
                              background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                              cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
@@ -84,7 +85,7 @@ class OnboardingScreen(Screen):
                          size_hint=(0.1, 1),
                          background_color=get_color_from_hex(COLORS['white'] + 'ff'))
         
-        city_layout.add_widget(city_input)
+        city_layout.add_widget(self.city_input)
         city_layout.add_widget(city_icon)
         form_layout.add_widget(city_layout)
         
@@ -93,7 +94,7 @@ class OnboardingScreen(Screen):
                                  size_hint=(1, None),
                                  height=dp(40))
         
-        country_input = TextInput(hint_text='Country',
+        self.country_input = TextInput(hint_text='Country',
                                 multiline=False,
                                 background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                                 cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
@@ -103,7 +104,7 @@ class OnboardingScreen(Screen):
                             size_hint=(0.1, 1),
                             background_color=get_color_from_hex(COLORS['white'] + 'ff'))
         
-        country_layout.add_widget(country_input)
+        country_layout.add_widget(self.country_input)
         country_layout.add_widget(country_icon)
         form_layout.add_widget(country_layout)
         
@@ -112,7 +113,7 @@ class OnboardingScreen(Screen):
                                    size_hint=(1, None),
                                    height=dp(40))
         
-        interests_input = TextInput(hint_text='Areas of Interest',
+        self.interests_input = TextInput(hint_text='Areas of Interest',
                                   multiline=False,
                                   background_color=get_color_from_hex(COLORS['white'] + 'ff'),
                                   cursor_color=get_color_from_hex(COLORS['primary'] + 'ff'),
@@ -122,7 +123,7 @@ class OnboardingScreen(Screen):
                              size_hint=(0.1, 1),
                              background_color=get_color_from_hex(COLORS['white'] + 'ff'))
         
-        interests_layout.add_widget(interests_input)
+        interests_layout.add_widget(self.interests_input)
         interests_layout.add_widget(dropdown_icon)
         form_layout.add_widget(interests_layout)
         
@@ -138,22 +139,41 @@ class OnboardingScreen(Screen):
         
         layout.add_widget(form_layout)
         
-        # Skip option
-        skip_btn = Button(text='Skip',
-                        background_color=get_color_from_hex(COLORS['background'] + '00'),
-                        color=get_color_from_hex(COLORS['primary'] + 'ff'),
-                        size_hint=(0.2, 0.05),
-                        pos_hint={'right': 0.95, 'top': 0.95})
-        skip_btn.bind(on_press=self.skip_to_home)
-        layout.add_widget(skip_btn)
+        # # Skip option
+        # skip_btn = Button(text='Skip',
+        #                 background_color=get_color_from_hex(COLORS['background'] + '00'),
+        #                 color=get_color_from_hex(COLORS['primary'] + 'ff'),
+        #                 size_hint=(0.2, 0.05),
+        #                 pos_hint={'right': 0.95, 'top': 0.95})
+        # skip_btn.bind(on_press=self.skip_to_home)
+        # layout.add_widget(skip_btn)
         
         self.add_widget(layout)
+
+    def set_user_id(self, user_id):
+        self.user_id = user_id
+        print(f"Received user_id: {self.user_id}")  # Debugging
+
     
+    def save_user_profile(self):
+        if self.user_id is None:
+            print("Error: No user_id found!")  # Prevent saving without user_id
+            return
+
+        self.cursor.execute('''
+            INSERT INTO user_profiles (user_id, name, city, country, interests)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (self.user_id, self.name_input, self.city_input, self.country_input, self.interests_input))
+        self.conn.commit()
+
+        print(f"User Profile Saved for ID: {self.user_id}")
+ 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
     
     def continue_to_home(self, instance):
+        self.save_user_profile
         self.manager.transition = SlideTransition(direction='left')
         self.manager.current = 'home'
     

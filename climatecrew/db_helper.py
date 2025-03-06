@@ -12,15 +12,19 @@ class DatabaseHelper:
         self.create_tables()
     
     def connect(self):
-        self.conn = sqlite3.connect(self.db_path)
-        self.cursor = self.conn.cursor()
+        if self.conn is None:
+            self.conn = sqlite3.connect(self.db_path)
+            self.cursor = self.conn.cursor()
+        
+        return self.conn  # Return the connection
+
     
     def close(self):
         if self.conn:
             self.conn.close()
     
     def create_tables(self):
-        # Create users table
+        # Create users table (if not already created)
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,8 +34,22 @@ class DatabaseHelper:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # Create user_profiles table linked to users table
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE NOT NULL,
+                name TEXT,
+                city TEXT,
+                country TEXT,
+                interests TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+
         self.conn.commit()
-    
+
     def hash_password(self, password):
         # Simple password hashing using SHA-256
         return hashlib.sha256(password.encode()).hexdigest()
