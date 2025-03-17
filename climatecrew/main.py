@@ -6,6 +6,7 @@ from screens.registration import RegistrationScreen
 from screens.onboarding import OnboardingScreen
 from screens.home import HomeScreen
 from screens.welcome import WelcomeScreen
+from screens.profile import ProfileScreen
 from kivy.core.text import LabelBase
 from db_helper import DatabaseHelper
 
@@ -34,11 +35,13 @@ class ClimateCrewApp(App):
         login_screen = LoginScreen(self.db_helper, name='login')
         register_screen = RegistrationScreen(self.db_helper, name='register')
         home_screen = HomeScreen(name='home')
+        profile_screen = ProfileScreen(name='profile')
         sm.add_widget(WelcomeScreen())
         sm.add_widget(login_screen)
         sm.add_widget(register_screen)
         sm.add_widget(home_screen)
         sm.add_widget(OnboardingScreen())
+        sm.add_widget(profile_screen)
         
         return sm
 
