@@ -1,4 +1,4 @@
-from kivy.app import App
+from kivymd.app import MDApp
 from kivy.uix.screenmanager import ScreenManager, SlideTransition
 from kivy.core.window import Window
 from screens.login import LoginScreen
@@ -25,7 +25,7 @@ COLORS = {
     'white': '#ffffff'
 }
 
-class ClimateCrewApp(App):
+class ClimateCrewApp(MDApp):
     def build(self):
         self.db_helper = DatabaseHelper()
         # Create the screen manager

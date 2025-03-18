@@ -9,6 +9,8 @@ from kivy.uix.image import Image
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 from kivy.graphics import Color, Rectangle
+from kivymd.uix.button import MDFloatingActionButton
+from kivymd.uix.label import MDLabel
 
 # Constants
 COLORS = {
@@ -39,11 +41,11 @@ class ProfileScreen(Screen):
         )
         
         # Back button
-        back_btn = Button(
-            text='←',
+        back_btn = MDFloatingActionButton(
+            icon='arrow-back',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['text'] + 'ff'),
+            md_bg_color=(0,0,0,0),
+            icon_color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(0.1, 1)
         )
         back_btn.bind(on_press=self.go_back)
@@ -306,82 +308,53 @@ class ProfileScreen(Screen):
         
         # Home button
         home_btn = BoxLayout(orientation='vertical')
-        home_icon = Button(
-            text='⌂',
+        home_icon = MDFloatingActionButton(
+            icon='home',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
-        home_icon.bind(on_press=self.go_to_home)
-        home_label = Label(
-            text='Home',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         home_btn.add_widget(home_icon)
-        home_btn.add_widget(home_label)
+        # home_btn.add_widget(home_label)
         nav_bar.add_widget(home_btn)
         
         # Map button
         map_btn = BoxLayout(orientation='vertical')
-        map_icon = Button(
-            text='◎',
+        map_icon = MDFloatingActionButton(
+            icon='map-marker',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
         map_icon.bind(on_press=self.go_to_map)
-        map_label = Label(
-            text='Map',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         map_btn.add_widget(map_icon)
-        map_btn.add_widget(map_label)
+        # map_btn.add_widget(map_label)
         nav_bar.add_widget(map_btn)
         
         # Social button
         social_btn = BoxLayout(orientation='vertical')
-        social_icon = Button(
-            text='⚇',
+        social_icon = MDFloatingActionButton(
+            icon='account-group',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
         social_icon.bind(on_press=self.go_to_social)
-        social_label = Label(
-            text='Social',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         social_btn.add_widget(social_icon)
-        social_btn.add_widget(social_label)
+        # social_btn.add_widget(social_label)
         nav_bar.add_widget(social_btn)
         
         # News button
         news_btn = BoxLayout(orientation='vertical')
-        news_icon = Button(
-            text='≡',
+        news_icon = MDFloatingActionButton(
+            icon='newspaper',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
         news_icon.bind(on_press=self.go_to_news)
-        news_label = Label(
-            text='News',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         news_btn.add_widget(news_icon)
-        news_btn.add_widget(news_label)
+        # news_btn.add_widget(news_label)
         nav_bar.add_widget(news_btn)
         
         main_layout.add_widget(nav_bar)
@@ -396,7 +369,7 @@ class ProfileScreen(Screen):
         self
 
     def go_back(self, instance):
-        self.manager.transition.direction = 'left'
+        self.manager.transition.direction = 'right'
         self.manager.current = 'home'
 
     def save_profile(self, instance):

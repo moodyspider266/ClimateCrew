@@ -8,6 +8,8 @@ from kivy.uix.button import Button
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 from kivy.graphics import Color, Rectangle
+from kivymd.uix.button import MDFloatingActionButton
+from kivymd.uix.label import MDLabel
 
 # Color scheme based on your Figma design
 COLORS = {
@@ -46,11 +48,11 @@ class HomeScreen(Screen):
         header.bind(size=self._update_header_rect, pos=self._update_header_rect)
         
         # Menu button
-        menu_btn = Button(
-            text='≡',
+        menu_btn = MDFloatingActionButton(
+            icon='menu',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
+            icon_color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(0.1, 1)
         )
         header.add_widget(menu_btn)
@@ -125,16 +127,25 @@ class HomeScreen(Screen):
         task_card.bind(size=self._update_task_rect, pos=self._update_task_rect)
         
         # Task description
-        task_text = Label(
+        task_text = MDLabel(
             text='This weekend, your task is to volunteer for a local tree planting initiative in Mumbai. Find one happening near you (check with local NGOs or online). It\'s a great way to contribute to the city\'s green spaces!',
             font_size=dp(16),
             color=get_color_from_hex(COLORS['white'] + 'ff'),
             halign='left',
             valign='top',
-            size_hint=(0.9, 0.7),
+            size_hint=(0.9, None),
+            # height=dp(120),
             pos_hint={'center_x': 0.5, 'top': 0.95},
-            text_size=(None, None)
+            # text_size=(dp(280), None)  # Set width constraint for text wrapping
         )
+        # Bind the width of task_card to update text_size
+        def update_text_size(instance, value):
+            task_text.text_size = (instance.width * 0.9, None)
+            task_text.texture_update()
+            # After texture update, adjust height based on texture size
+            task_text.height = task_text.texture_size[1]
+
+        task_card.bind(width=update_text_size)
         task_card.add_widget(task_text)
         
         # Impact points
@@ -191,84 +202,56 @@ class HomeScreen(Screen):
             Color(rgba=get_color_from_hex(COLORS['primary'] + 'ff'))
             self.nav_rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
         nav_bar.bind(size=self._update_nav_rect, pos=self._update_nav_rect)
-        
+         
         # Home button
         home_btn = BoxLayout(orientation='vertical')
-        home_icon = Button(
-            text='⌂',
+        home_icon = MDFloatingActionButton(
+            icon='home',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
-        home_label = Label(
-            text='Home',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         home_btn.add_widget(home_icon)
-        home_btn.add_widget(home_label)
+        # home_btn.add_widget(home_label)
         nav_bar.add_widget(home_btn)
         
         # Map button
         map_btn = BoxLayout(orientation='vertical')
-        map_icon = Button(
-            text='◎',
+        map_icon = MDFloatingActionButton(
+            icon='map-marker',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
         map_icon.bind(on_press=self.go_to_map)
-        map_label = Label(
-            text='Map',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         map_btn.add_widget(map_icon)
-        map_btn.add_widget(map_label)
+        # map_btn.add_widget(map_label)
         nav_bar.add_widget(map_btn)
         
         # Social button
         social_btn = BoxLayout(orientation='vertical')
-        social_icon = Button(
-            text='⚇',
+        social_icon = MDFloatingActionButton(
+            icon='account-group',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
         social_icon.bind(on_press=self.go_to_social)
-        social_label = Label(
-            text='Social',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         social_btn.add_widget(social_icon)
-        social_btn.add_widget(social_label)
+        # social_btn.add_widget(social_label)
         nav_bar.add_widget(social_btn)
         
         # News button
         news_btn = BoxLayout(orientation='vertical')
-        news_icon = Button(
-            text='≡',
+        news_icon = MDFloatingActionButton(
+            icon='newspaper',
             font_size=dp(24),
-            background_color=(0, 0, 0, 0),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            md_bg_color=(68/255, 110/255, 73/255, 1),
             size_hint=(1, 0.7)
         )
         news_icon.bind(on_press=self.go_to_news)
-        news_label = Label(
-            text='News',
-            font_size=dp(12),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
-            size_hint=(1, 0.3)
-        )
         news_btn.add_widget(news_icon)
-        news_btn.add_widget(news_label)
+        # news_btn.add_widget(news_label)
         nav_bar.add_widget(news_btn)
         
         main_layout.add_widget(nav_bar)
