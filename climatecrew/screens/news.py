@@ -8,7 +8,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.network.urlrequest import UrlRequest
 from kivy.properties import ListProperty, NumericProperty
 from kivy.clock import Clock
@@ -17,6 +17,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
 import json
 import webbrowser
+
 
 # Color scheme based on your Figma design
 COLORS = {
@@ -252,7 +253,7 @@ class NewsScreen(Screen):
 
     def on_news_success(self, request, result):
         """Handle successful news API response"""
-        self.news_items = result.get('news', [])
+        self.news_items = result.get('articles', [])
         if self.news_items:
             self.current_index = 0
             self.display_current_news()
@@ -261,6 +262,8 @@ class NewsScreen(Screen):
 
     def on_news_error(self, request, error):
         """Handle news API error"""
+        print(f"News API Error: {error}")
+        print(f"Request: {request}")
         self.display_error(f"Could not load news: {error}")
 
     def display_error(self, message):
@@ -303,10 +306,10 @@ class NewsScreen(Screen):
         content_layout.add_widget(title)
 
         # Image if available
-        if news.get('image_url'):
+        if news.get('image'):
             try:
                 img = AsyncImage(
-                    source=news['image_url'],
+                    source=news['image'],
                     size_hint=(1, None),
                     height=dp(200),
                     allow_stretch=True,
@@ -318,7 +321,7 @@ class NewsScreen(Screen):
 
         # Content
         content = MDLabel(
-            text=news['content'],
+            text=news['summary'],
             theme_text_color="Secondary",
             font_style="Body1",
             halign="left",
@@ -327,30 +330,30 @@ class NewsScreen(Screen):
         )
         content_layout.add_widget(content)
 
-        # Source link button
-        source_layout = BoxLayout(
-            orientation='horizontal',
-            size_hint=(1, None),
-            height=dp(50)
-        )
+        # # Source link button
+        # source_layout = BoxLayout(
+        #     orientation='horizontal',
+        #     size_hint=(1, None),
+        #     height=dp(50)
+        # )
 
-        source_label = MDLabel(
-            text=f"Source: {news['source_name']}",
-            theme_text_color="Secondary",
-            size_hint=(0.6, 1)
-        )
-        source_layout.add_widget(source_label)
+        # source_label = MDLabel(
+        #     text=f"Source: {news['source_name']}",
+        #     theme_text_color="Secondary",
+        #     size_hint=(0.6, 1)
+        # )
+        # source_layout.add_widget(source_label)
 
-        view_btn = Button(
-            text="Read More",
-            background_color=get_color_from_hex(COLORS['primary'] + 'ff'),
-            size_hint=(0.4, 1)
-        )
-        view_btn.bind(
-            on_press=lambda x: self.open_source_url(news['source_url']))
-        source_layout.add_widget(view_btn)
+        # view_btn = Button(
+        #     text="Read More",
+        #     background_color=get_color_from_hex(COLORS['primary'] + 'ff'),
+        #     size_hint=(0.4, 1)
+        # )
+        # view_btn.bind(
+        #     on_press=lambda x: self.open_source_url(news['source_url']))
+        # source_layout.add_widget(view_btn)
 
-        content_layout.add_widget(source_layout)
+        # content_layout.add_widget(source_layout)
 
         # News counter
         counter_label = MDLabel(
