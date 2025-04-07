@@ -38,7 +38,7 @@ class ClimateCrewApp(MDApp):
         login_screen = LoginScreen(self.db_helper, name='login')
         register_screen = RegistrationScreen(self.db_helper, name='register')
         home_screen = HomeScreen(name='home')
-        profile_screen = ProfileScreen(name='profile')
+        profile_screen = ProfileScreen(self.db_helper, name='profile')
         news_screen = NewsScreen(name='news')
         sm.add_widget(WelcomeScreen())
         sm.add_widget(login_screen)
