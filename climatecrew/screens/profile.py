@@ -1,4 +1,7 @@
-from kivy.uix.screenmanager import Screen, SlideTransition
+import cv2
+import threading
+from kivy.graphics.texture import Texture
+from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
@@ -7,26 +10,17 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
+from kivy.clock import Clock
+from kivy.uix.screenmanager import SlideTransition
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 from kivy.graphics import Color, Rectangle
-from kivy.clock import Clock
-from kivy.core.window import Window
-from kivymd.uix.button import MDFloatingActionButton, MDIconButton, MDRaisedButton
-from kivymd.uix.label import MDLabel
-from kivymd.uix.textfield import MDTextField
+from kivymd.uix.button import MDFloatingActionButton, MDRaisedButton, MDIconButton
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.list import OneLineAvatarListItem
+from kivymd.uix.label import MDLabel
 from kivymd.uix.filemanager import MDFileManager
-from kivy.uix.camera import Camera
-import io
-import os
-import base64
-from PIL import Image as PILImage
-import threading
-import traceback
+from curses import *
 
-# Color scheme based on your Figma design
 COLORS = {
     'background': '#e3f8ee',
     'primary': '#446e49',
@@ -40,15 +34,17 @@ COLORS = {
 
 
 class ProfileScreen(Screen):
-    def __init__(self, db_helper=None, **kwargs):  # Made db_helper optional
+    def __init__(self, db_helper=None, **kwargs):
         super(ProfileScreen, self).__init__(**kwargs)
         self.name = 'profile'
         self.db_helper = db_helper
         self.user_id = None
         self.profile_image_data = None
-        self.camera = None
         self.file_manager = None
+        self.capture = None  # OpenCV VideoCapture object
+        self.camera_running = False  # Flag to control the camera thread
 
+        # Main layout and UI setup
         main_layout = FloatLayout()
         with main_layout.canvas.before:
             Color(rgba=get_color_from_hex(COLORS['background'] + 'ff'))
@@ -107,7 +103,7 @@ class ProfileScreen(Screen):
         content_layout = BoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(900),  # Increased height for all content
+            height=dp(900),
             spacing=dp(15),
             padding=[dp(20), dp(20)]
         )
@@ -134,8 +130,7 @@ class ProfileScreen(Screen):
 
         # Profile image
         try:
-            # Use a default image that's more likely to exist
-            default_img_path = 'atlas://data/images/defaulttheme/user'
+            default_img_path = '../assets/default_profile.png'
             self.profile_image = Image(
                 source=default_img_path,
                 size_hint=(None, None),
@@ -178,7 +173,6 @@ class ProfileScreen(Screen):
         )
         choose_photo_btn.bind(on_press=self.open_file_manager)
         image_buttons.add_widget(choose_photo_btn)
-
         image_layout.add_widget(image_buttons)
         content_layout.add_widget(image_layout)
 
@@ -523,11 +517,13 @@ class ProfileScreen(Screen):
         self.add_widget(main_layout)
 
         # Initialize database if available
+        # In ProfileScreen's __init__ method
         if self.db_helper:
             try:
-                self.db_helper.create_user_profiles_table()
+                # Call the create_tables method to ensure all tables are created
+                self.db_helper.create_tables()
             except Exception as e:
-                print(f"Error creating user profiles table: {e}")
+                print(f"Error creating tables: {e}")
 
     def set_user_id(self, user_id):
         """Set the user ID and load profile data"""
@@ -535,6 +531,7 @@ class ProfileScreen(Screen):
 
     def on_enter(self):
         """Load user profile data when entering the screen"""
+        # self.user_id = App.get_running_app().get_user_id()
         if self.user_id and self.db_helper:
             try:
                 self.load_profile_data()
@@ -629,92 +626,41 @@ class ProfileScreen(Screen):
             self.status_label.color = (1, 0, 0, 1)
 
     def open_camera(self, instance):
-        """Open camera to take profile photo"""
+        """Simplified camera capture without preview"""
         try:
-            # Simplified camera approach
-            self.status_label.text = "Opening camera..."
+            self.status_label.text = "Accessing camera..."
             self.status_label.color = (0, 0, 1, 1)
 
-            # Create a simple camera layout
-            self.camera_layout = BoxLayout(orientation='vertical')
+            # Create direct capture with OpenCV
+            capture = cv2.VideoCapture(0)
+            if not capture.isOpened():
+                self.status_label.text = "Could not open camera"
+                self.status_label.color = (1, 0, 0, 1)
+                return
 
-            # Create camera widget with proper configuration
-            self.camera = Camera(
-                # Lower resolution for better performance
-                resolution=(320, 240),
-                play=True
-            )
-            self.camera_layout.add_widget(self.camera)
-
-            # Camera buttons
-            camera_buttons = BoxLayout(size_hint=(1, 0.2))
-
-            capture_btn = Button(
-                text="Capture",
-                size_hint=(0.5, 1),
-                background_color=get_color_from_hex(COLORS['primary'] + 'ff'),
-                color=get_color_from_hex(COLORS['white'] + 'ff'),
-            )
-            capture_btn.bind(on_press=self.capture_photo)
-            camera_buttons.add_widget(capture_btn)
-
-            cancel_btn = Button(
-                text="Cancel",
-                size_hint=(0.5, 1),
-                background_color=get_color_from_hex(
-                    COLORS['button_blue'] + 'ff'),
-                color=get_color_from_hex(COLORS['white'] + 'ff'),
-            )
-            cancel_btn.bind(on_press=self.dismiss_camera)
-            camera_buttons.add_widget(cancel_btn)
-
-            self.camera_layout.add_widget(camera_buttons)
-
-            # Display camera in a popup dialog
-            self.camera_dialog = MDDialog(
-                title="Take Profile Photo",
-                type="custom",
-                content_cls=self.camera_layout,
-                size_hint=(0.9, 0.8),
-                auto_dismiss=False  # Prevent accidental dismissal
-            )
-
-            self.camera_dialog.open()
-            self.status_label.text = ""
+            # Wait a moment to let the camera initialize
+            Clock.schedule_once(lambda dt: self.take_photo(capture), 1)
 
         except Exception as e:
-            print(f"Error opening camera: {e}")
-            traceback.print_exc()
+            print(f"Error accessing camera: {e}")
             self.status_label.text = f"Camera error: {str(e)}"
             self.status_label.color = (1, 0, 0, 1)
 
-    # Replace the capture_photo and dismiss_camera methods with these:
-
-    def capture_photo(self, instance):
-        """Capture photo from camera"""
+    def take_photo(self, capture):
+        """Take photo immediately"""
         try:
-            if self.camera and self.camera.texture:
-                self.status_label.text = "Processing photo..."
+            # Take photo
+            ret, frame = capture.read()
 
-                # Create a temporary filename
+            if ret:
+                # Save the photo
                 temp_path = 'temp_profile_image.png'
+                cv2.imwrite(temp_path, frame)
 
-                # Using PIL to convert the texture to an image
-                texture = self.camera.texture
-                size = texture.size
-                pixels = texture.pixels
+                # Release camera
+                capture.release()
 
-                # Convert buffer to PIL Image
-                pil_image = PILImage.frombytes(
-                    mode='RGBA',
-                    size=size,
-                    data=pixels
-                )
-
-                # Save the PIL image
-                pil_image.save(temp_path)
-
-                # Read the file back as binary data
+                # Read the file as binary data
                 with open(temp_path, 'rb') as f:
                     self.profile_image_data = f.read()
 
@@ -722,54 +668,22 @@ class ProfileScreen(Screen):
                 self.profile_image.source = temp_path
                 self.profile_image.reload()
 
-                # Close camera dialog
-                self.dismiss_camera(None)
-
+                # Show success message
                 self.status_label.text = "Photo captured!"
                 self.status_label.color = (0, 1, 0, 1)
                 Clock.schedule_once(lambda dt: setattr(
                     self.status_label, 'text', ''), 2)
             else:
-                self.status_label.text = "Camera not ready"
+                capture.release()
+                self.status_label.text = "Failed to capture photo"
                 self.status_label.color = (1, 0, 0, 1)
 
         except Exception as e:
-            print(f"Error capturing photo: {e}")
-            traceback.print_exc()
-            self.status_label.text = f"Error capturing photo: {str(e)}"
+            if capture:
+                capture.release()
+            print(f"Error taking photo: {e}")
+            self.status_label.text = f"Error: {str(e)}"
             self.status_label.color = (1, 0, 0, 1)
-            # Try to dismiss the camera even if there's an error
-            self.dismiss_camera(None)
-
-    def dismiss_camera(self, instance):
-        """Close the camera dialog"""
-        try:
-            if hasattr(self, 'camera') and self.camera:
-                # Properly release the camera
-                self.camera.play = False
-
-                # Allow time for camera to stop
-                def delayed_cleanup(dt):
-                    if hasattr(self, 'camera_dialog') and self.camera_dialog:
-                        self.camera_dialog.dismiss()
-                    self.camera = None
-                    self.camera_layout = None
-                    self.camera_dialog = None
-
-                # Schedule cleanup after a short delay
-                Clock.schedule_once(delayed_cleanup, 0.5)
-
-        except Exception as e:
-            print(f"Error dismissing camera: {e}")
-            traceback.print_exc()
-
-            # Last resort - try to force close the dialog
-            try:
-                if hasattr(self, 'camera_dialog') and self.camera_dialog:
-                    self.camera_dialog.dismiss()
-                self.camera = None
-            except:
-                pass
 
     def open_file_manager(self, instance):
         """Open file manager to choose image"""

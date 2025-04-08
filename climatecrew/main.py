@@ -29,6 +29,19 @@ COLORS = {
 
 
 class ClimateCrewApp(MDApp):
+    def __init__(self, **kwargs):
+        super(ClimateCrewApp, self).__init__(**kwargs)
+        self.current_user_id = None  # Store the current user's ID here
+
+    def set_user_id(self, user_id):
+        """Set the current user ID"""
+        self.current_user_id = user_id
+        print(f"User ID set in app: {user_id}")
+
+    def get_user_id(self):
+        """Get the current user ID"""
+        return self.current_user_id
+
     def build(self):
         self.db_helper = DatabaseHelper()
         # Create the screen manager

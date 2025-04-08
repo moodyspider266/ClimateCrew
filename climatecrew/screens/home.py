@@ -280,6 +280,7 @@ class HomeScreen(Screen):
 
     def go_to_profile(self, instance):
         self.manager.transition.direction = 'left'
+        self.manager.get_screen('profile').set_user_id(self.user_id)
         self.manager.current = 'profile'
 
     def go_to_leaderboard(self, instance):
