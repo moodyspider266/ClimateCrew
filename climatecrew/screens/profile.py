@@ -731,6 +731,20 @@ class ProfileScreen(Screen):
             self.file_manager.close()
             self.file_manager = None
 
+    def on_enter(self):
+        """Called when screen is entered - updates user ID"""
+        from kivy.app import App
+
+        # Get current user_id from app
+        app = App.get_running_app()
+        self.user_id = app.get_user_id()
+
+        # Update debug label
+        if hasattr(self, 'debug_user_id'):
+            self.debug_user_id.text = f"UserID: {self.user_id}"
+
+        print(f"Profile screen entered with user_id: {self.user_id}")
+
     def go_back(self, instance):
         """Go back to previous screen"""
         self.manager.transition = SlideTransition(direction='right')

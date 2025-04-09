@@ -28,6 +28,7 @@ class LoginScreen(Screen):
         super(LoginScreen, self).__init__(**kwargs)
         self.db_helper = db_helper
         self.name = 'login'
+        self.user_id = None
 
         layout = FloatLayout()
         with layout.canvas.before:
@@ -78,17 +79,6 @@ class LoginScreen(Screen):
         self.message = Label(text="", color=(1, 0, 0, 1))
         form_layout.add_widget(self.message)
 
-        # Forgot password link
-        forgot_pw = Label(text='Forgot your password?',
-                          font_size=dp(14),
-                          color=get_color_from_hex(
-                              COLORS['secondary_text'] + 'ff'),
-                          size_hint=(1, None),
-                          height=dp(30),
-                          halign='right')
-        forgot_pw.bind(on_touch_down=self.forgot_password)
-        form_layout.add_widget(forgot_pw)
-
         # Sign in button
         signin_btn = Button(text='Sign In',
                             background_color=get_color_from_hex(
@@ -112,39 +102,6 @@ class LoginScreen(Screen):
         form_layout.add_widget(account_label)
 
         layout.add_widget(form_layout)
-
-        # Social login options
-        social_layout = BoxLayout(orientation='horizontal',
-                                  spacing=dp(20),
-                                  pos_hint={'center_x': 0.5, 'center_y': 0.28},
-                                  size_hint=(0.6, 0.05))
-
-        # Social login icons (these would be replaced with actual icons)
-        google_btn = Button(text='G',
-                            background_color=get_color_from_hex(
-                                COLORS['white'] + 'ff'),
-                            color=get_color_from_hex(COLORS['primary'] + 'ff'),
-                            size_hint=(0.33, 1))
-
-        facebook_btn = Button(text='F',
-                              background_color=get_color_from_hex(
-                                  COLORS['white'] + 'ff'),
-                              color=get_color_from_hex(
-                                  COLORS['primary'] + 'ff'),
-                              size_hint=(0.33, 1))
-
-        twitter_btn = Button(text='T',
-                             background_color=get_color_from_hex(
-                                 COLORS['white'] + 'ff'),
-                             color=get_color_from_hex(
-                                 COLORS['primary'] + 'ff'),
-                             size_hint=(0.33, 1))
-
-        social_layout.add_widget(google_btn)
-        social_layout.add_widget(facebook_btn)
-        social_layout.add_widget(twitter_btn)
-
-        layout.add_widget(social_layout)
 
         # Back button
         back_btn = Button(text='Back',
@@ -170,21 +127,29 @@ class LoginScreen(Screen):
         print(f"Username : {username} \nPassword : {password}")
 
         if not username or not password:
-            self.message.text = 'Please enter all required details'
+            self.message.text = 'Please enter username and password.'
             self.message.color = (1, 0, 0, 1)
             return
 
-        response = self.db_helper.authenticate_user(username, password)
-        print(f"Response : {response}")
+        user_data = self.db_helper.authenticate_user(username, password)
 
-        if response:  # If authentication is successful
-            self.message.text = 'Login Successful!'
+        if user_data:  # If authentication is successful
+            user_id = user_data[0]  # Assuming first element is user_id
+            print(f"Successfully logged in. User ID: {user_id}")
+
+            # Set user_id in the app
+            app = App.get_running_app()
+            app.set_user_id(user_id)
+
+            # Show success animation
+            self.message.text = "Login successful!"
             self.message.color = (0, 1, 0, 1)
-            # Delay transition by 2 seconds
-            Clock.schedule_once(self.navigate_to_home, 3)
+
+            # Delay navigation to home
+            Clock.schedule_once(self.navigate_to_home, 1)
         else:
             # Show error and stay on login screen
-            self.message.text = 'Username or Password is wrong'
+            self.message.text = 'Invalid username or password.'
             self.message.color = (1, 0, 0, 1)
 
     # Example code to navigate from login to profile (add this to your login screen)

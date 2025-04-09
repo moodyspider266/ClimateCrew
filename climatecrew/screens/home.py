@@ -25,9 +25,11 @@ COLORS = {
 
 
 class HomeScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, db_helper, **kwargs):
         super(HomeScreen, self).__init__(**kwargs)
         self.name = 'home'
+        self.db_helper = db_helper
+        self.user_id = None
 
         main_layout = FloatLayout()
         with main_layout.canvas.before:
@@ -94,17 +96,15 @@ class HomeScreen(Screen):
         leaderboard_btn.bind(on_press=self.go_to_leaderboard)
         content.add_widget(leaderboard_btn)
 
-        # Welcome message
-        welcome_label = Label(
-            text='Welcome Kushl!',
-            font_size=dp(22),
-            color=get_color_from_hex(COLORS['primary'] + 'ff'),
-            halign='left',
-            valign='middle',
-            size_hint=(1, 0.08),
-            text_size=(None, None)
-        )
-        content.add_widget(welcome_label)
+        # self.debug_user_id = Label(
+        #     text=f"UserID: {self.user_id}",
+        #     size_hint=(None, None),
+        #     size=(dp(200), dp(30)),
+        #     pos_hint={'top': 0.98, 'right': 0.99},
+        #     color=(1, 0, 0, 1),  # Red text
+        #     opacity=1  # Initially hidden
+        # )
+        # main_layout.add_widget(self.debug_user_id)
 
         # Task heading
         task_heading = Label(
@@ -261,6 +261,21 @@ class HomeScreen(Screen):
         main_layout.add_widget(nav_bar)
 
         self.add_widget(main_layout)
+
+    # Add this method to your HomeScreen class
+    def on_enter(self):
+        """Called when screen is entered - updates user ID"""
+        from kivy.app import App
+
+        # Get current user_id from app
+        app = App.get_running_app()
+        self.user_id = app.get_user_id()
+
+        # Update debug label
+        if hasattr(self, 'debug_user_id'):
+            self.debug_user_id.text = f"UserID: {self.user_id}"
+
+        print(f"Home screen entered with user_id: {self.user_id}")
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos

@@ -73,12 +73,15 @@ class DatabaseHelper:
 
     def authenticate_user(self, username, password):
         password_hash = self.hash_password(password)
-        self.cursor.execute(
-            "SELECT id FROM users WHERE username = ? AND password_hash = ?",
-            (username, password_hash)
-        )
-        user = self.cursor.fetchone()
-        return user is not None
+        try:
+            self.cursor.execute(
+                "SELECT id, username, email FROM users WHERE username = ? AND password_hash = ?",
+                (username, password_hash)
+            )
+            return self.cursor.fetchone()  # Returns (id, username, email) or None if not found
+        except Exception as e:
+            print(f"Authentication error: {e}")
+            return None
 
     def get_user_profile(self, user_id):
         """Get user profile data"""

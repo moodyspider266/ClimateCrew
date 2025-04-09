@@ -36,7 +36,7 @@ class ClimateCrewApp(MDApp):
     def set_user_id(self, user_id):
         """Set the current user ID"""
         self.current_user_id = user_id
-        print(f"User ID set in app: {user_id}")
+        print(f"User ID set in app: {self.current_user_id}")
 
     def get_user_id(self):
         """Get the current user ID"""
@@ -50,7 +50,8 @@ class ClimateCrewApp(MDApp):
         # Add screens
         login_screen = LoginScreen(self.db_helper, name='login')
         register_screen = RegistrationScreen(self.db_helper, name='register')
-        home_screen = HomeScreen(name='home')
+        home_screen = HomeScreen(
+            db_helper=self.db_helper, name='home')
         profile_screen = ProfileScreen(self.db_helper, name='profile')
         news_screen = NewsScreen(name='news')
         sm.add_widget(WelcomeScreen())
