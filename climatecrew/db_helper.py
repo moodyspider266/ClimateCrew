@@ -85,88 +85,95 @@ class DatabaseHelper:
 
     def get_user_profile(self, user_id):
         """Get user profile data"""
-        conn = self.connect()
-        cursor = conn.cursor()
+        try:
+            # Use existing connection
+            cursor = self.conn.cursor()
 
-        # First try to get from user_profiles
-        cursor.execute('''
-            SELECT user_id, full_name, username, email, contact, city, country, occupation, profile_image 
-            FROM user_profiles WHERE user_id = ?
-        ''', (user_id,))
+            # First try to get from user_profiles
+            cursor.execute('''
+                SELECT user_id, full_name, username, email, contact, city, country, occupation, profile_image 
+                FROM user_profiles WHERE user_id = ?
+            ''', (user_id,))
 
-        profile = cursor.fetchone()
+            profile = cursor.fetchone()
 
-        if not profile:
-            # Profile doesn't exist, get basic info from users table
-            cursor.execute(
-                'SELECT id, "", username, email FROM users WHERE id = ?', (user_id,))
-            basic_info = cursor.fetchone()
+            if not profile:
+                # Profile doesn't exist, get basic info from users table
+                cursor.execute(
+                    'SELECT id, "", username, email FROM users WHERE id = ?', (user_id,))
+                basic_info = cursor.fetchone()
 
-            if basic_info:
-                # Create empty profile with basic info
-                user_id, _, username, email = basic_info
-                cursor.execute('''
-                    INSERT INTO user_profiles (user_id, full_name, username, email)
-                    VALUES (?, ?, ?, ?)
-                ''', (user_id, "", username, email))
-                conn.commit()
-                # Return the new profile
-                profile = (user_id, "", username, email, "", "", "", "", None)
+                if basic_info:
+                    # Create empty profile with basic info
+                    user_id, _, username, email = basic_info
+                    cursor.execute('''
+                        INSERT INTO user_profiles (user_id, full_name, username, email)
+                        VALUES (?, ?, ?, ?)
+                    ''', (user_id, "", username, email))
+                    self.conn.commit()
+                    # Return the new profile
+                    profile = (user_id, "", username,
+                               email, "", "", "", "", None)
 
-        cursor.close()
-        conn.close()
+            # Don't close cursor or connection
+            return profile
 
-        return profile
+        except Exception as e:
+            print(f"Error getting user profile: {e}")
+            return None
 
-    def update_user_profile(self, user_id, contact=None, city=None, country=None, occupation=None, profile_image=None):
+    def update_user_profile(self, user_id, contact, city, country, occupation, profile_image=None):
         """Update user profile data"""
-        conn = self.connect()
-        cursor = conn.cursor()
+        try:
+            # Use existing connection instead of creating new one
+            cursor = self.conn.cursor()
 
-        # Build the update query dynamically based on provided fields
-        update_fields = []
-        values = []
+            # Build the update query dynamically based on provided fields
+            update_fields = []
+            values = []
 
-        if contact is not None:
-            update_fields.append("contact = ?")
-            values.append(contact)
+            if contact is not None:
+                update_fields.append("contact = ?")
+                values.append(contact)
 
-        if city is not None:
-            update_fields.append("city = ?")
-            values.append(city)
+            if city is not None:
+                update_fields.append("city = ?")
+                values.append(city)
 
-        if country is not None:
-            update_fields.append("country = ?")
-            values.append(country)
+            if country is not None:
+                update_fields.append("country = ?")
+                values.append(country)
 
-        if occupation is not None:
-            update_fields.append("occupation = ?")
-            values.append(occupation)
+            if occupation is not None:
+                update_fields.append("occupation = ?")
+                values.append(occupation)
 
-        if profile_image is not None:
-            update_fields.append("profile_image = ?")
-            values.append(profile_image)
+            if profile_image is not None:
+                update_fields.append("profile_image = ?")
+                values.append(profile_image)
 
-        if not update_fields:
-            cursor.close()
-            conn.close()
+            if not update_fields:
+                return False
+
+            # Add user_id to values list
+            values.append(user_id)
+
+            query = f'''
+                UPDATE user_profiles 
+                SET {', '.join(update_fields)}
+                WHERE user_id = ?
+            '''
+
+            print("Profile updated successfully for user_id:", user_id)
+
+            cursor.execute(query, values)
+            self.conn.commit()  # Commit on self.conn
+
+            success = cursor.rowcount > 0
+
+            # Don't close the cursor or connection
+            return success
+
+        except Exception as e:
+            print(f"Error updating profile: {e}")
             return False
-
-        # Add user_id to values list
-        values.append(user_id)
-
-        query = f'''
-            UPDATE user_profiles 
-            SET {', '.join(update_fields)}
-            WHERE user_id = ?
-        '''
-
-        cursor.execute(query, values)
-        conn.commit()
-
-        success = cursor.rowcount > 0
-
-        cursor.close()
-        conn.close()
-
-        return success

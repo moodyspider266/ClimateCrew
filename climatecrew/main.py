@@ -65,8 +65,10 @@ class ClimateCrewApp(MDApp):
         return sm
 
     def on_stop(self):
-        # Close database connection when app closes
-        self.db_helper.close()
+        """Called when the application is closing"""
+        if self.db_helper:
+            self.db_helper.close()
+            print("Database connection closed")
 
 
 if __name__ == '__main__':

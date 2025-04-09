@@ -732,18 +732,35 @@ class ProfileScreen(Screen):
             self.file_manager = None
 
     def on_enter(self):
-        """Called when screen is entered - updates user ID"""
+        """Called when screen is entered - updates user ID and loads profile data"""
         from kivy.app import App
 
         # Get current user_id from app
         app = App.get_running_app()
         self.user_id = app.get_user_id()
 
-        # Update debug label
+        # Debug output
+        print(f"Profile screen entered with user_id: {self.user_id}")
+
+        # Update debug label if it exists
         if hasattr(self, 'debug_user_id'):
             self.debug_user_id.text = f"UserID: {self.user_id}"
 
-        print(f"Profile screen entered with user_id: {self.user_id}")
+        # Load profile data if user_id is available
+        if self.user_id and self.db_helper:
+            try:
+                self.load_profile_data()
+                print("Profile data loaded successfully")
+            except Exception as e:
+                print(f"Error loading profile data: {e}")
+                self.status_label.text = "Could not load profile data"
+                self.status_label.color = (1, 0, 0, 1)
+        else:
+            print(
+                f"Cannot load profile: user_id={self.user_id}, db_helper={self.db_helper is not None}")
+            if not self.user_id:
+                self.status_label.text = "Error: User ID not available"
+                self.status_label.color = (1, 0, 0, 1)
 
     def go_back(self, instance):
         """Go back to previous screen"""
