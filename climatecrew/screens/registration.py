@@ -122,31 +122,6 @@ class RegistrationScreen(Screen):
                                   pos_hint={'center_x': 0.5, 'center_y': 0.25},
                                   size_hint=(0.6, 0.05))
 
-        # Social login icons (these would be replaced with actual icons)
-        google_btn = Button(text='G',
-                            background_color=get_color_from_hex(
-                                COLORS['white'] + 'ff'),
-                            color=get_color_from_hex(COLORS['primary'] + 'ff'),
-                            size_hint=(0.33, 1))
-
-        facebook_btn = Button(text='F',
-                              background_color=get_color_from_hex(
-                                  COLORS['white'] + 'ff'),
-                              color=get_color_from_hex(
-                                  COLORS['primary'] + 'ff'),
-                              size_hint=(0.33, 1))
-
-        twitter_btn = Button(text='T',
-                             background_color=get_color_from_hex(
-                                 COLORS['white'] + 'ff'),
-                             color=get_color_from_hex(
-                                 COLORS['primary'] + 'ff'),
-                             size_hint=(0.33, 1))
-
-        social_layout.add_widget(google_btn)
-        social_layout.add_widget(facebook_btn)
-        social_layout.add_widget(twitter_btn)
-
         layout.add_widget(social_layout)
 
         # Back button
