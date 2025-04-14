@@ -116,6 +116,7 @@ class UpvoteButton(ButtonBehavior, BoxLayout):
         self.count_label.text = str(count)
 
 
+# Update the PostCard class with better spacing and alignment
 class PostCard(BoxLayout):
     """A card displaying a user's post"""
 
@@ -123,9 +124,9 @@ class PostCard(BoxLayout):
         super(PostCard, self).__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint = (1, None)
-        self.height = dp(500)  # Will be adjusted based on content
-        self.padding = [dp(10), dp(10)]
-        self.spacing = dp(10)
+        self.height = dp(600)  # Will be adjusted based on content
+        self.padding = [dp(15), dp(15)]  # Increased padding
+        self.spacing = dp(15)  # Increased spacing between all elements
         self.post_data = post_data
         self.db_helper = db_helper
 
@@ -136,13 +137,13 @@ class PostCard(BoxLayout):
         user_profile = db_helper.get_user_profile(user_id)
         username = user_profile[2] if user_profile else f"User {user_id}"
 
-        # Card background
+        # Card background with larger border radius
         with self.canvas.before:
             Color(rgba=get_color_from_hex(COLORS['white'] + 'ff'))
             self.card_bg = RoundedRectangle(
                 size=self.size,
                 pos=self.pos,
-                radius=[dp(10),]
+                radius=[dp(15),]  # Increased radius for softer corners
             )
         self.bind(size=self.update_card_bg, pos=self.update_card_bg)
 
@@ -151,7 +152,8 @@ class PostCard(BoxLayout):
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(50),
-            spacing=dp(10)
+            spacing=dp(10),
+            padding=[0, dp(5)]  # Add some vertical padding
         )
 
         # Load profile image from database if available
@@ -198,13 +200,15 @@ class PostCard(BoxLayout):
         header.add_widget(username_label)
         header.add_widget(date_label)
 
-        # Location label if available
-        location_layout = None
+        self.add_widget(header)
+
+        # Location label with spacing before
         if location_text:
             location_layout = BoxLayout(
                 orientation='horizontal',
                 size_hint=(1, None),
-                height=dp(30)
+                height=dp(30),
+                padding=[dp(5), 0]  # Add horizontal padding
             )
 
             location_icon = MDIconButton(
@@ -227,11 +231,27 @@ class PostCard(BoxLayout):
 
             location_layout.add_widget(location_icon)
             location_layout.add_widget(location_label)
+            self.add_widget(location_layout)
 
-        # Post image
-        image_container = BoxLayout(
+        # Task text (above image)
+        task_label = MDLabel(
+            text=f"Task: {task_text[:80] + ('...' if len(task_text) > 80 else '')}",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(COLORS['primary'] + 'ff'),
             size_hint=(1, None),
-            height=dp(250)  # Fixed height for image
+            height=dp(30),
+            halign='left',
+            valign='middle',
+            padding=[dp(5), 0]  # Add some padding
+        )
+        self.add_widget(task_label)
+
+        # Post image with container for better spacing
+        image_container = BoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(270),  # Increased height
+            padding=[0, dp(10)]  # Add vertical padding
         )
 
         self.post_image = Image(
@@ -249,9 +269,10 @@ class PostCard(BoxLayout):
             self.post_image.source = temp_image.name
 
         image_container.add_widget(self.post_image)
+        self.add_widget(image_container)
 
-        # Upvote button and task text
-        action_bar = BoxLayout(
+        # Upvote button in its own container
+        upvote_container = BoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
             height=dp(50),
@@ -265,29 +286,40 @@ class PostCard(BoxLayout):
             submission_id=post_id
         )
 
-        # Task label
-        task_label = MDLabel(
-            text=f"Task: {task_text[:80] + ('...' if len(task_text) > 80 else '')}",
+        upvote_container.add_widget(self.upvote_btn)
+
+        # Add a spacer to push upvote button to the left
+        spacer = BoxLayout(size_hint=(1, 1))
+        upvote_container.add_widget(spacer)
+
+        self.add_widget(upvote_container)
+
+        # Description text with better formatting
+        description_heading = MDLabel(
+            text="Description:",
             theme_text_color="Custom",
             text_color=get_color_from_hex(COLORS['primary'] + 'ff'),
-            size_hint=(0.7, 1),
-            halign='right',
-            valign='middle'
+            bold=True,
+            size_hint=(1, None),
+            height=dp(30),
+            halign='left'
         )
+        self.add_widget(description_heading)
 
-        action_bar.add_widget(self.upvote_btn)
-        action_bar.add_widget(task_label)
-
-        # Description text
         description_layout = BoxLayout(
             orientation='vertical',
             size_hint=(1, None),
-            height=dp(100)  # Will be adjusted based on content
+            height=dp(100),  # Will be adjusted based on content
+            padding=[dp(5), 0]  # Add horizontal padding
         )
 
         description_scroll = ScrollView(
             size_hint=(1, 1),
-            do_scroll_x=False
+            do_scroll_x=False,
+            do_scroll_y=True,
+            bar_width=dp(5),
+            bar_color=[0.7, 0.7, 0.7, 0.9],
+            bar_inactive_color=[0.7, 0.7, 0.7, 0.2]
         )
 
         self.description_label = MDLabel(
@@ -297,7 +329,7 @@ class PostCard(BoxLayout):
             size_hint=(1, None),
             halign='left',
             valign='top',
-            text_size=(Window.width - dp(40), None)  # Account for padding
+            text_size=(Window.width - dp(50), None)  # Account for padding
         )
         self.description_label.bind(
             texture_size=self.update_description_height)
@@ -305,17 +337,12 @@ class PostCard(BoxLayout):
         description_scroll.add_widget(self.description_label)
         description_layout.add_widget(description_scroll)
 
-        # Add components to card
-        self.add_widget(header)
-        if location_layout:
-            self.add_widget(location_layout)
-        self.add_widget(image_container)
-        self.add_widget(action_bar)
         self.add_widget(description_layout)
 
         # Adjust overall card height
         Clock.schedule_once(self.adjust_height, 0.1)
 
+    # Add these methods to the PostCard class
     def update_card_bg(self, instance, value):
         """Update card background on size/pos change"""
         self.card_bg.size = self.size
@@ -323,18 +350,25 @@ class PostCard(BoxLayout):
 
     def update_description_height(self, instance, value):
         """Update height based on description text size"""
-        instance.height = instance.texture_size[1]
+        instance.height = value[1]  # Set height to texture height
 
     def adjust_height(self, dt):
         """Adjust overall card height based on content"""
-        # Calculate content height
-        content_height = sum(c.height for c in self.children)
-        # Add spacing
-        content_height += self.spacing * (len(self.children) - 1)
-        # Add padding
-        content_height += self.padding[1] * 2
-        # Set card height
-        self.height = content_height
+        try:
+            # Calculate content height
+            content_height = sum(c.height for c in self.children)
+            # Add spacing
+            content_height += self.spacing * (len(self.children) - 1)
+            # Add padding
+            content_height += self.padding[1] * 2
+            # Set card height with a small margin
+            self.height = content_height + dp(10)
+
+            # Ensure parent container updates its size if needed
+            if hasattr(self.parent, 'height') and self.parent.height != self.height:
+                self.parent.height = max(self.parent.height, self.height)
+        except Exception as e:
+            print(f"Error adjusting card height: {e}")
 
 
 class SocialScreen(Screen):
@@ -424,14 +458,30 @@ class SocialScreen(Screen):
         self.filter_btn.bind(on_press=self.toggle_filter)
         content_area.add_widget(self.filter_btn)
 
-        # Post display area
+        self.post_scroll = ScrollView(
+            # Reduced height to make room for navigation buttons
+            size_hint=(1, 0.78),
+            pos_hint={'center_x': 0.5, 'top': 0.93},
+            do_scroll_x=False,
+            do_scroll_y=True,
+            bar_width=dp(10),
+            bar_color=[0.7, 0.7, 0.7, 0.9],
+            bar_inactive_color=[0.7, 0.7, 0.7, 0.2],
+            scroll_type=['bars', 'content']
+        )
+
+        # Create a container for the posts inside the scroll view
         self.post_container = BoxLayout(
             orientation='vertical',
-            size_hint=(1, 0.85),
-            pos_hint={'center_x': 0.5, 'top': 0.94},
+            size_hint=(1, None),  # Height will be set dynamically
             padding=[dp(10), dp(10)]
         )
-        content_area.add_widget(self.post_container)
+        # Ensure the container expands to fit its children
+        self.post_container.bind(
+            minimum_height=self.post_container.setter('height'))
+
+        self.post_scroll.add_widget(self.post_container)
+        content_area.add_widget(self.post_scroll)
 
         # Navigation buttons
         nav_buttons = BoxLayout(
@@ -612,7 +662,36 @@ class SocialScreen(Screen):
         )
 
         # Add to container
+        # Update the display_current_post method
         self.post_container.add_widget(post_card)
+
+    def display_current_post(self):
+        """Display the current post"""
+        if not self.posts or self.current_index >= len(self.posts):
+            self.show_status("No posts to display")
+            return
+
+        # Clear container
+        self.post_container.clear_widgets()
+
+        try:
+            # Create post card for current post
+            post_card = PostCard(
+                post_data=self.posts[self.current_index],
+                db_helper=self.db_helper,
+                on_upvote_callback=self.handle_upvote
+            )
+
+            # Add to container
+            self.post_container.add_widget(post_card)
+
+            # Reset scroll position to top
+            Clock.schedule_once(lambda dt: setattr(
+                self.post_scroll, 'scroll_y', 1), 0.1)
+
+        except Exception as e:
+            print(f"Error displaying post: {e}")
+            self.show_status("Error displaying post")
 
     def show_next_post(self, instance):
         """Show the next post"""
