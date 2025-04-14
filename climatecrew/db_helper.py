@@ -76,6 +76,22 @@ class DatabaseHelper:
             );
         ''')
 
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_submissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                task_text TEXT NOT NULL,
+                image BLOB,
+                latitude REAL,
+                longitude REAL,
+                location_text TEXT,
+                description TEXT,
+                submission_date TEXT,
+                upvotes INTEGER DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+        ''')
+
         self.conn.commit()
 
     def hash_password(self, password):
@@ -291,7 +307,7 @@ class DatabaseHelper:
             new_points = current_points + task_points
 
             # Update counters and generate new task
-            new_task = "You've completed a task! Generate a new one with the Change Task button."
+            new_task = "You've completed the task! Generate a new one with the Change Task button."
 
             self.cursor.execute(
                 '''UPDATE task_management 
@@ -303,7 +319,7 @@ class DatabaseHelper:
             )
             self.conn.commit()
             print(
-                f"Task completed for user {user_id}. New points: {new_points}, Tasks: {completed_count + 1}")
+                f"Task completed for user {user_id}. Total points: {new_points}, Tasks: {completed_count + 1}")
 
             return True
         except Exception as e:
@@ -337,3 +353,80 @@ class DatabaseHelper:
         except Exception as e:
             print(f"Error resetting user points: {e}")
             return False
+
+    def add_submission(self, user_id, task_text, image=None, latitude=None, longitude=None,
+                       location_text=None, description=None, submission_date=None):
+        """Add a new task submission from a user"""
+        try:
+            # Use existing connection
+            cursor = self.conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO user_submissions (
+                    user_id, task_text, image, latitude, longitude, 
+                    location_text, description, submission_date, upvotes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id, task_text, image, latitude, longitude,
+                location_text, description, submission_date, 0
+            ))
+
+            self.conn.commit()
+
+            print(f"Submission added for user {user_id}")
+            return True
+        except Exception as e:
+            print(f"Error adding submission: {e}")
+            return False
+
+    def get_user_submissions(self, user_id=None, limit=10):
+        """Get user submissions, optionally filtered by user_id"""
+        try:
+            # Use existing connection
+            cursor = self.conn.cursor()
+
+            if user_id:
+                cursor.execute('''
+                    SELECT id, user_id, task_text, image, latitude, longitude, 
+                           location_text, description, submission_date, upvotes
+                    FROM user_submissions 
+                    WHERE user_id = ?
+                    ORDER BY submission_date DESC
+                    LIMIT ?
+                ''', (user_id, limit))
+            else:
+                cursor.execute('''
+                    SELECT id, user_id, task_text, image, latitude, longitude, 
+                           location_text, description, submission_date, upvotes
+                    FROM user_submissions 
+                    ORDER BY submission_date DESC
+                    LIMIT ?
+                ''', (limit,))
+
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting submissions: {e}")
+            return []
+
+    def upvote_submission(self, submission_id):
+        """Increase the upvote count for a submission"""
+        try:
+            # Use existing connection
+            cursor = self.conn.cursor()
+
+            cursor.execute('''
+                UPDATE user_submissions 
+                SET upvotes = upvotes + 1
+                WHERE id = ?
+            ''', (submission_id,))
+
+            self.conn.commit()
+
+            # Return the new upvote count
+            cursor.execute('SELECT upvotes FROM user_submissions WHERE id = ?',
+                           (submission_id,))
+            result = cursor.fetchone()
+            return result[0] if result else 0
+        except Exception as e:
+            print(f"Error upvoting submission: {e}")
+            return 0

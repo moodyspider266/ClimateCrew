@@ -339,7 +339,7 @@ class HomeScreen(Screen):
 
     # Add this method to your HomeScreen class
     def on_enter(self):
-        """Called when screen is entered - updates user ID"""
+        """Called when screen is entered - updates user ID and loads task"""
         from kivy.app import App
 
         # Get current user_id from app
@@ -352,6 +352,7 @@ class HomeScreen(Screen):
 
         print(f"Home screen entered with user_id: {self.user_id}")
 
+        # Load task from database
         if self.user_id:
             self.load_user_task()
 
@@ -361,6 +362,8 @@ class HomeScreen(Screen):
                 points, tasks_completed = self.db_helper.get_user_stats(
                     self.user_id)
                 self.leaderboard_btn.text = f"Points: {points} | Tasks Completed: {tasks_completed}"
+                print(
+                    f"Updated leaderboard display: Points={points}, Tasks={tasks_completed}")
             except Exception as e:
                 print(f"Error updating points display: {e}")
 
@@ -453,34 +456,13 @@ class HomeScreen(Screen):
 
     def submit_task(self, instance):
         """Submit the current task as completed"""
-        if not self.user_id or not self.db_helper:
-            self.show_task_status(
-                "Cannot submit task: User ID or database not available")
+        if not self.user_id:
+            self.show_task_status("Login required to submit tasks")
             return
 
-        try:
-            # Always award 20 points for a task
-            task_points = 20
-
-            # Update user's stats in database
-            if self.db_helper.complete_task(self.user_id, task_points):
-                # Show success message
-                self.show_task_status(f"Task completed! +{task_points} points")
-
-                # Update leaderboard button with new stats
-                stats = self.db_helper.get_user_stats(self.user_id)
-                if stats:
-                    points, tasks_completed = stats
-                    self.leaderboard_btn.text = f"🏆 Points: {points} | Tasks: {tasks_completed}"
-
-                # Generate a new task automatically
-                Clock.schedule_once(lambda dt: self.get_new_task(None), 1.5)
-            else:
-                self.show_task_status("Failed to submit task")
-
-        except Exception as e:
-            print(f"Error submitting task: {e}")
-            self.show_task_status(f"Error: {str(e)}")
+        # Navigate to submit task screen
+        self.manager.transition.direction = 'left'
+        self.manager.current = 'submit_task'
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos

@@ -8,6 +8,7 @@ from screens.home import HomeScreen
 from screens.welcome import WelcomeScreen
 from screens.profile import ProfileScreen
 from screens.news import NewsScreen
+from screens.submit_task import SubmitTaskScreen
 from kivy.core.text import LabelBase
 from db_helper import DatabaseHelper
 
@@ -54,6 +55,8 @@ class ClimateCrewApp(MDApp):
             db_helper=self.db_helper, name='home')
         profile_screen = ProfileScreen(self.db_helper, name='profile')
         news_screen = NewsScreen(name='news')
+        submit_task_screen = SubmitTaskScreen(
+            self.db_helper, name='submit_task')
         sm.add_widget(WelcomeScreen())
         sm.add_widget(login_screen)
         sm.add_widget(register_screen)
@@ -61,6 +64,7 @@ class ClimateCrewApp(MDApp):
         sm.add_widget(OnboardingScreen())
         sm.add_widget(profile_screen)
         sm.add_widget(news_screen)
+        sm.add_widget(submit_task_screen)
 
         return sm
 
