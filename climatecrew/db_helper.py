@@ -11,13 +11,28 @@ class DatabaseHelper:
         self.cursor = None
         self.connect()
         self.create_tables()
+        self.reset_user_points()  # Only run this once to fix existing data
 
     def connect(self):
-        if self.conn is None:
+        """Connect to database"""
+        try:
+            # Close any existing connection first
+            if self.conn:
+                try:
+                    self.conn.close()
+                except:
+                    pass  # Ignore errors when closing already closed connection
+
+            # Create new connection
             self.conn = sqlite3.connect(self.db_path)
             self.cursor = self.conn.cursor()
-
-        return self.conn  # Return the connection
+            print("Database connected successfully")
+            return self.conn
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            self.conn = None
+            self.cursor = None
+            return None
 
     def close(self):
         if self.conn:
@@ -49,6 +64,16 @@ class DatabaseHelper:
                 profile_image BLOB,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
+        ''')
+
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS task_management (
+                user_id INTEGER PRIMARY KEY,
+                current_task TEXT,
+                points INTEGER DEFAULT 0,
+                num_tasks_completed INTEGER DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
         ''')
 
         self.conn.commit()
@@ -86,6 +111,11 @@ class DatabaseHelper:
     def get_user_profile(self, user_id):
         """Get user profile data"""
         try:
+            # Check if connection is closed and reconnect if needed
+            if self.conn is None or not hasattr(self.conn, 'cursor'):
+                print("Database connection is closed. Attempting to reconnect...")
+                self.connect()
+
             # Use existing connection
             cursor = self.conn.cursor()
 
@@ -120,6 +150,11 @@ class DatabaseHelper:
 
         except Exception as e:
             print(f"Error getting user profile: {e}")
+            # Try to reconnect for next time
+            try:
+                self.connect()
+            except:
+                pass
             return None
 
     def update_user_profile(self, user_id, contact, city, country, occupation, profile_image=None):
@@ -176,4 +211,129 @@ class DatabaseHelper:
 
         except Exception as e:
             print(f"Error updating profile: {e}")
+            return False
+
+    def initialize_user_task(self, user_id, task="Start your climate journey by measuring your carbon footprint using an online calculator.", task_points=20):
+        """Initialize a new user's task after registration"""
+        try:
+            # Check if user already has task data
+            self.cursor.execute(
+                'SELECT user_id FROM task_management WHERE user_id = ?', (user_id,))
+            if self.cursor.fetchone():
+                print(f"User {user_id} already has task data")
+                return True
+
+            # Create new task entry WITH ZERO ACCUMULATED POINTS
+            self.cursor.execute(
+                'INSERT INTO task_management (user_id, current_task, points, num_tasks_completed) VALUES (?, ?, ?, ?)',
+                (user_id, task, 0, 0)  # Initialize points to 0
+            )
+            self.conn.commit()
+            print(f"Task initialized for user {user_id}")
+            return True
+        except Exception as e:
+            print(f"Error initializing user task: {e}")
+            return False
+
+    def get_user_task(self, user_id):
+        """Get a user's current task data"""
+        try:
+            self.cursor.execute(
+                'SELECT current_task, points, num_tasks_completed FROM task_management WHERE user_id = ?',
+                (user_id,)
+            )
+            task_data = self.cursor.fetchone()
+
+            if not task_data:
+                # If no task exists, initialize one
+                default_task = "Start your climate journey by measuring your carbon footprint using an online calculator."
+                self.initialize_user_task(user_id, default_task)
+                # Return 0 points as accumulated points
+                return (default_task, 0, 0)
+
+            # Return task, accumulated points, and completed tasks count
+            return task_data
+        except Exception as e:
+            print(f"Error getting user task: {e}")
+            return (None, 0, 0)
+
+    def update_user_task(self, user_id, new_task, task_points=20):
+        """Update a user's current task without changing points"""
+        try:
+            # Only update the task, not the points
+            self.cursor.execute(
+                'UPDATE task_management SET current_task = ? WHERE user_id = ?',
+                (new_task, user_id)
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating user task: {e}")
+            return False
+
+    def complete_task(self, user_id, task_points=20):
+        """Mark a task as completed, update points and task count"""
+        try:
+            # Get current values
+            self.cursor.execute(
+                'SELECT points, num_tasks_completed FROM task_management WHERE user_id = ?',
+                (user_id,)
+            )
+            task_data = self.cursor.fetchone()
+
+            if not task_data:
+                print(f"No task data found for user {user_id}")
+                return False
+
+            current_points, completed_count = task_data
+
+            # Add task points to the accumulated points
+            new_points = current_points + task_points
+
+            # Update counters and generate new task
+            new_task = "You've completed a task! Generate a new one with the Change Task button."
+
+            self.cursor.execute(
+                '''UPDATE task_management 
+                   SET points = ?,
+                       num_tasks_completed = ?, 
+                       current_task = ? 
+                   WHERE user_id = ?''',
+                (new_points, completed_count + 1, new_task, user_id)
+            )
+            self.conn.commit()
+            print(
+                f"Task completed for user {user_id}. New points: {new_points}, Tasks: {completed_count + 1}")
+
+            return True
+        except Exception as e:
+            print(f"Error completing task: {e}")
+            return False
+
+    def get_user_stats(self, user_id):
+        """Get user's points and completed task count"""
+        try:
+            self.cursor.execute(
+                'SELECT points, num_tasks_completed FROM task_management WHERE user_id = ?',
+                (user_id,)
+            )
+            stats = self.cursor.fetchone()
+
+            if not stats:
+                return (0, 0)
+
+            return stats
+        except Exception as e:
+            print(f"Error getting user stats: {e}")
+            return (0, 0)
+
+    def reset_user_points(self):
+        """Reset points for all users to fix existing data"""
+        try:
+            self.cursor.execute('UPDATE task_management SET points = 0')
+            self.conn.commit()
+            print("All user points have been reset")
+            return True
+        except Exception as e:
+            print(f"Error resetting user points: {e}")
             return False

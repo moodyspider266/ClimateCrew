@@ -187,9 +187,16 @@ class RegistrationScreen(Screen):
         response = self.db_helper.register_user(username, password, email)
         print("Response :", response)
         if response == True:
-            self.message.text = 'Registration Successful!'
-            self.message.color = (0, 1, 0, 1)
-            Clock.schedule_once(self.navigate_to_onboarding, 3)
+            user_data = self.db_helper.authenticate_user(username, password)
+            if user_data:
+                user_id = user_data[0]
+                # Store user_id in app
+                App.get_running_app().set_user_id(user_id)
+                # Initialize user task
+                self.db_helper.initialize_user_task(user_id)
+                self.message.text = 'Registration Successful!'
+                self.message.color = (0, 1, 0, 1)
+                Clock.schedule_once(self.navigate_to_onboarding, 3)
         else:
             self.message.text = 'Username or email already exists'
             self.message.color = (1, 0, 0, 1)

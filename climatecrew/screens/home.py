@@ -10,6 +10,10 @@ from kivy.utils import get_color_from_hex
 from kivy.graphics import Color, Rectangle
 from kivymd.uix.button import MDFloatingActionButton
 from kivymd.uix.label import MDLabel
+import requests
+from kivy.clock import Clock
+from kivy.network.urlrequest import UrlRequest
+import json
 
 # Color scheme based on your Figma design
 COLORS = {
@@ -93,6 +97,7 @@ class HomeScreen(Screen):
             size_hint=(1, 0.08),
             pos_hint={'center_x': 0.5}
         )
+        self.leaderboard_btn = leaderboard_btn
         leaderboard_btn.bind(on_press=self.go_to_leaderboard)
         content.add_widget(leaderboard_btn)
 
@@ -118,6 +123,16 @@ class HomeScreen(Screen):
         )
         content.add_widget(task_heading)
 
+        # Add a status label for task errors
+        self.task_status = Label(
+            text="",
+            color=(1, 0, 0, 1),
+            size_hint=(1, 0.05),
+            opacity=0,
+            pos_hint={'center_x': 0.5}
+        )
+        content.add_widget(self.task_status)
+
         # Task card
         task_card = FloatLayout(
             size_hint=(1, 0.4)
@@ -129,8 +144,8 @@ class HomeScreen(Screen):
         task_card.bind(size=self._update_task_rect, pos=self._update_task_rect)
 
         # Task description
-        task_text = MDLabel(
-            text='This weekend, your task is to volunteer for a local tree planting initiative in Mumbai. Find one happening near you (check with local NGOs or online). It\'s a great way to contribute to the city\'s green spaces!',
+        task = MDLabel(
+            text='Your personalized task will appear here.',
             font_size=dp(16),
             color=get_color_from_hex(COLORS['white'] + 'ff'),
             halign='left',
@@ -140,16 +155,16 @@ class HomeScreen(Screen):
             pos_hint={'center_x': 0.5, 'top': 0.95},
             # text_size=(dp(280), None)  # Set width constraint for text wrapping
         )
-        # Bind the width of task_card to update text_size
+        self.task = task
 
         def update_text_size(instance, value):
-            task_text.text_size = (instance.width * 0.9, None)
-            task_text.texture_update()
+            task.text_size = (instance.width * 0.9, None)
+            task.texture_update()
             # After texture update, adjust height based on texture size
-            task_text.height = task_text.texture_size[1]
+            task.height = task.texture_size[1]
 
         task_card.bind(width=update_text_size)
-        task_card.add_widget(task_text)
+        task_card.add_widget(task)
 
         # Impact points
         points_btn = Button(
@@ -161,6 +176,7 @@ class HomeScreen(Screen):
             pos_hint={'center_x': 0.5, 'y': 0.05}
         )
         task_card.add_widget(points_btn)
+        self.points_btn = points_btn
 
         content.add_widget(task_card)
 
@@ -180,6 +196,7 @@ class HomeScreen(Screen):
             color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(0.5, 1)
         )
+        change_task_btn.bind(on_press=self.get_new_task)
         task_buttons.add_widget(change_task_btn)
 
         submit_task_btn = Button(
@@ -189,9 +206,17 @@ class HomeScreen(Screen):
             color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(0.5, 1)
         )
+        submit_task_btn.bind(on_press=self.submit_task)
         task_buttons.add_widget(submit_task_btn)
 
         content.add_widget(task_buttons)
+        self.task_status = Label(
+            text="",
+            color=(1, 0, 0, 1),
+            size_hint=(1, 0.1),
+            opacity=0
+        )
+        content.add_widget(self.task_status)
 
         main_layout.add_widget(content)
 
@@ -276,6 +301,135 @@ class HomeScreen(Screen):
             self.debug_user_id.text = f"UserID: {self.user_id}"
 
         print(f"Home screen entered with user_id: {self.user_id}")
+
+        if self.user_id:
+            self.load_user_task()
+
+        # Update leaderboard/points display
+        if self.user_id and self.db_helper:
+            try:
+                points, tasks_completed = self.db_helper.get_user_stats(
+                    self.user_id)
+                self.leaderboard_btn.text = f"🏆 Points: {points} | Tasks: {tasks_completed}"
+            except Exception as e:
+                print(f"Error updating points display: {e}")
+
+    def load_user_task(self):
+        """Load user's current task from database"""
+        if not self.user_id or not self.db_helper:
+            self.show_task_status("User ID or database not available")
+            return
+
+        try:
+            # Get task data from database
+            task_data = self.db_helper.get_user_task(self.user_id)
+
+            if task_data and task_data[0]:
+                # Update task text
+                self.task.text = task_data[0]
+
+                # Update points button
+                points = task_data[1]
+                self.points_btn.text = f"+20 Impact Points"
+
+                # Force update of text size/layout
+                self.task.texture_update()
+                self.task.height = self.task.texture_size[1]
+            else:
+                self.task.text = "Could not load task. Try generating a new one."
+        except Exception as e:
+            print(f"Error loading user task: {e}")
+            self.show_task_status(f"Error: {str(e)}")
+
+    def get_task_for_user(self):
+        """Generate a new task and save it to database"""
+        if not self.user_id:
+            self.show_task_status("No user ID available")
+            return
+
+        # Show loading status
+        self.task.text = "Generating a new task for you..."
+
+        # API endpoint
+        url = f"http://localhost:5000/api/generate-task?user_id={self.user_id}"
+
+        # Make API request
+        UrlRequest(url, on_success=self.process_new_task_response,
+                   on_error=self.handle_task_error,
+                   on_failure=self.handle_task_error)
+
+    def process_new_task_response(self, request, result):
+        """Process the task API response and save to database"""
+        try:
+            # Get task and points from response
+            task_text = result.get('task', "No task available")
+            impact_points = result.get('impact_points', 20)
+
+            # Update task in database
+            if self.db_helper.update_user_task(self.user_id, task_text, impact_points):
+                # Update UI
+                self.task.text = task_text
+                self.points_btn.text = f"+{impact_points} Impact Points"
+
+                # Force update of text size/layout
+                self.task.texture_update()
+                self.task.height = self.task.texture_size[1]
+
+                self.show_task_status("New task generated!")
+            else:
+                self.show_task_status("Failed to save new task")
+
+        except Exception as e:
+            print(f"Error processing task response: {e}")
+            self.show_task_status(f"Error: {str(e)}")
+
+    def get_new_task(self, instance):
+        """Get a new task when Change Task button is clicked"""
+        self.get_task_for_user()
+
+    def handle_task_error(self, request, error):
+        """Handle API errors"""
+        print(f"Task API error: {error}")
+        self.task.text = "Could not load personalized task. Try again later."
+        self.show_task_status("Connection error")
+
+    def show_task_status(self, message):
+        """Show status message with auto-hide"""
+        self.task_status.text = message
+        self.task_status.opacity = 1
+        Clock.schedule_once(lambda dt: setattr(
+            self.task_status, 'opacity', 0), 3)
+
+    def submit_task(self, instance):
+        """Submit the current task as completed"""
+        if not self.user_id or not self.db_helper:
+            self.show_task_status(
+                "Cannot submit task: User ID or database not available")
+            return
+
+        try:
+            # Always award 20 points for a task
+            task_points = 20
+
+            # Update user's stats in database
+            if self.db_helper.complete_task(self.user_id, task_points):
+                # Show success message
+                self.show_task_status(f"Task completed! +{task_points} points")
+
+                # Update leaderboard button with new stats
+                stats = self.db_helper.get_user_stats(self.user_id)
+                if stats:
+                    points, tasks_completed = stats
+                    self.leaderboard_btn.text = f"🏆 Points: {points} | Tasks: {tasks_completed}"
+
+                # Generate a new task automatically
+                Clock.schedule_once(lambda dt: self.get_new_task(None), 1.5)
+            else:
+                self.show_task_status("Failed to submit task")
+
+        except Exception as e:
+            print(f"Error submitting task: {e}")
+            self.show_task_status(f"Error: {str(e)}")
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
