@@ -5,10 +5,11 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
-from kivy.graphics import Color, Rectangle
-from kivymd.uix.button import MDFloatingActionButton
+from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivymd.uix.button import MDFloatingActionButton, MDIconButton
 from kivymd.uix.label import MDLabel
 import requests
 from kivy.clock import Clock
@@ -51,7 +52,11 @@ class HomeScreen(Screen):
 
         with header.canvas.before:
             Color(rgba=get_color_from_hex(COLORS['primary'] + 'ff'))
-            self.header_rect = Rectangle(size=header.size, pos=header.pos)
+            self.header_rect = RoundedRectangle(
+                size=header.size,
+                pos=header.pos,
+                radius=[0, 0, 0, dp(10)]  # Bottom corners rounded
+            )
         header.bind(size=self._update_header_rect,
                     pos=self._update_header_rect)
 
@@ -69,10 +74,12 @@ class HomeScreen(Screen):
         header.add_widget(BoxLayout(size_hint=(0.8, 1)))
 
         # Profile photo button
-        profile_btn = Button(
-            background_normal='../assets/default_profile.png',
-            background_down='../assets/default_profile.png',
-            border=(0, 0, 0, 0),
+        profile_btn = MDIconButton(
+            icon='account-circle',
+            pos_hint={'center_y': 0.5},
+            icon_size=dp(24),
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(0.1, 1)
         )
         profile_btn.bind(on_press=self.go_to_profile)
@@ -90,10 +97,10 @@ class HomeScreen(Screen):
 
         # Leaderboard position
         leaderboard_btn = Button(
-            text='🏆 Leaderboard Position : 5',
+            text='',
             font_size=dp(18),
-            background_color=get_color_from_hex(COLORS['yellow'] + 'ff'),
-            color=get_color_from_hex(COLORS['text'] + 'ff'),
+            background_color=get_color_from_hex('#FFD54F' + 'ff'),
+            color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(1, 0.08),
             pos_hint={'center_x': 0.5}
         )
@@ -135,25 +142,40 @@ class HomeScreen(Screen):
 
         # Task card
         task_card = FloatLayout(
-            size_hint=(1, 0.4)
+            size_hint=(1, 0.5)
         )
 
         with task_card.canvas.before:
             Color(rgba=get_color_from_hex(COLORS['task_bg'] + 'ff'))
-            self.task_rect = Rectangle(size=task_card.size, pos=task_card.pos)
+            self.task_rect = RoundedRectangle(
+                size=task_card.size,
+                pos=task_card.pos,
+                radius=[dp(10),]  # Add rounded corners
+            )
         task_card.bind(size=self._update_task_rect, pos=self._update_task_rect)
+
+        # Create scrollview for task text (to handle overflow)
+        task_scroll = ScrollView(
+            size_hint=(0.9, 0.7),  # Increased height
+            pos_hint={'center_x': 0.5, 'top': 0.95},
+            do_scroll_x=False,  # Only vertical scrolling
+            do_scroll_y=True,
+            bar_width=dp(5),
+            bar_color=[0.8, 0.8, 0.8, 0.5],  # Light gray scrollbar
+            bar_inactive_color=[0.8, 0.8, 0.8, 0.2],
+            effect_cls='ScrollEffect'  # Smooth scrolling
+        )
 
         # Task description
         task = MDLabel(
             text='Your personalized task will appear here.',
             font_size=dp(16),
             color=get_color_from_hex(COLORS['white'] + 'ff'),
+            bold=True,
             halign='left',
             valign='top',
-            size_hint=(0.9, None),
-            # height=dp(120),
-            pos_hint={'center_x': 0.5, 'top': 0.95},
-            # text_size=(dp(280), None)  # Set width constraint for text wrapping
+            size_hint=(1, None),
+            text_size=(None, None)  # Set width constraint for text wrapping
         )
         self.task = task
 
@@ -161,17 +183,18 @@ class HomeScreen(Screen):
             task.text_size = (instance.width * 0.9, None)
             task.texture_update()
             # After texture update, adjust height based on texture size
-            task.height = task.texture_size[1]
+            task.height = max(task.texture_size[1], task_scroll.height)
 
-        task_card.bind(width=update_text_size)
-        task_card.add_widget(task)
+        task_scroll.bind(width=update_text_size)
+        task_scroll.add_widget(task)
+        task_card.add_widget(task_scroll)
 
         # Impact points
         points_btn = Button(
-            text='+ 20 Impact Points',
+            text='+20 Impact Points',
             font_size=dp(16),
-            background_color=get_color_from_hex(COLORS['yellow'] + 'ff'),
-            color=get_color_from_hex(COLORS['text'] + 'ff'),
+            background_color=get_color_from_hex('#FFD54F' + 'ff'),
+            color=get_color_from_hex(COLORS['white'] + 'ff'),
             size_hint=(0.5, 0.15),
             pos_hint={'center_x': 0.5, 'y': 0.05}
         )
@@ -188,22 +211,45 @@ class HomeScreen(Screen):
             padding=[dp(0), dp(10)]
         )
 
-        change_task_btn = Button(
+        # Custom button class for rounded corners
+        class RoundedButton(Button):
+            def __init__(self, **kwargs):
+                super(RoundedButton, self).__init__(**kwargs)
+                self.background_normal = ''
+                self.background_down = ''
+                with self.canvas.before:
+                    Color(rgba=self.background_color)
+                    self.rect = RoundedRectangle(
+                        size=self.size,
+                        pos=self.pos,
+                        radius=[dp(8),]
+                    )
+                self.bind(pos=self.update_rect, size=self.update_rect,
+                          background_color=self.update_rect_color)
+
+            def update_rect(self, *args):
+                self.rect.pos = self.pos
+                self.rect.size = self.size
+
+            def update_rect_color(self, *args):
+                self.canvas.before.children[0].rgba = self.background_color
+
+        change_task_btn = RoundedButton(
             text='Change Task',
             font_size=dp(16),
             background_color=get_color_from_hex(
                 COLORS['secondary_text'] + 'ff'),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            color=get_color_from_hex(COLORS['white'] + 'ff'),  # White text
             size_hint=(0.5, 1)
         )
         change_task_btn.bind(on_press=self.get_new_task)
         task_buttons.add_widget(change_task_btn)
 
-        submit_task_btn = Button(
+        submit_task_btn = RoundedButton(
             text='Submit Task',
             font_size=dp(16),
             background_color=get_color_from_hex(COLORS['button_blue'] + 'ff'),
-            color=get_color_from_hex(COLORS['white'] + 'ff'),
+            color=get_color_from_hex(COLORS['white'] + 'ff'),  # White text
             size_hint=(0.5, 1)
         )
         submit_task_btn.bind(on_press=self.submit_task)
@@ -229,7 +275,11 @@ class HomeScreen(Screen):
 
         with nav_bar.canvas.before:
             Color(rgba=get_color_from_hex(COLORS['primary'] + 'ff'))
-            self.nav_rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
+            self.nav_rect = RoundedRectangle(
+                size=nav_bar.size,
+                pos=nav_bar.pos,
+                radius=[dp(10), dp(10), 0, 0]  # Top corners rounded
+            )
         nav_bar.bind(size=self._update_nav_rect, pos=self._update_nav_rect)
 
         # Home button
@@ -310,7 +360,7 @@ class HomeScreen(Screen):
             try:
                 points, tasks_completed = self.db_helper.get_user_stats(
                     self.user_id)
-                self.leaderboard_btn.text = f"🏆 Points: {points} | Tasks: {tasks_completed}"
+                self.leaderboard_btn.text = f"Points: {points} | Tasks Completed: {tasks_completed}"
             except Exception as e:
                 print(f"Error updating points display: {e}")
 
@@ -330,11 +380,12 @@ class HomeScreen(Screen):
 
                 # Update points button
                 points = task_data[1]
-                self.points_btn.text = f"+20 Impact Points"
+                self.points_btn.text = "+20 Impact Points"
 
                 # Force update of text size/layout
                 self.task.texture_update()
-                self.task.height = self.task.texture_size[1]
+                self.task.height = max(
+                    self.task.texture_size[1], self.task.parent.height)
             else:
                 self.task.text = "Could not load task. Try generating a new one."
         except Exception as e:

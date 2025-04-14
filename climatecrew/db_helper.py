@@ -11,7 +11,7 @@ class DatabaseHelper:
         self.cursor = None
         self.connect()
         self.create_tables()
-        self.reset_user_points()  # Only run this once to fix existing data
+        # self.reset_user_points()  # Only run this once to fix existing data
 
     def connect(self):
         """Connect to database"""
